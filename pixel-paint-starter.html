@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixel Paint – Flood Fill Exercise</title>
+
+<!-- =========================================================================
+     YOUR CODE GOES HERE
+     -------------------------------------------------------------------------
+     The paint program below is complete except for one thing: the Fill tool.
+     When you click with the Fill tool, the app calls floodFill() from this
+     <script> block. Implement it, reload the page, and try it on the canvas.
+
+     Use "Run tests" (right-hand panel) to check your work. Your code runs in a
+     background worker with a time limit, so a runaway loop won't freeze the
+     page. Keep any helper functions inside this <script> block.
+     ========================================================================= -->
+<script id="flood-fill-impl">
+/**
+ * Flood fill ("paint bucket").
+ *
+ * The canvas is a flat array of palette indices, one byte per pixel, stored
+ * row by row:
+ *
+ *     index = y * width + x          (0 <= x < width, 0 <= y < height)
+ *
+ * Recolor the clicked pixel AND every pixel connected to it through pixels of
+ * the same original color. Pixels are connected if they share an edge
+ * (up, down, left, right). Pixels that only touch at a corner are not.
+ *
+ * @param {Uint8Array} pixels     The canvas. Modify it in place.
+ * @param {number}     width      Canvas width in pixels.
+ * @param {number}     height     Canvas height in pixels.
+ * @param {number}     startX     Column that was clicked.
+ * @param {number}     startY     Row that was clicked.
+ * @param {number}     fillColor  Palette index (0–15) to paint with.
+ * @returns {void}
+ *
+ * The app canvas is 256 × 256, but the tests also use other sizes,
+ * including non-square ones.
+ */
+function floodFill(pixels, width, height, startX, startY, fillColor) {
+  // TODO: implement me.
+}
+</script>
+<!-- ======================== END OF YOUR CODE ============================= -->
+
+
+<!-- The rest of this file is the paint program and the test suite.
+     You shouldn't need to change anything below, but you're welcome to read it. -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --desk: #c3c8d3;
+    --panel: #e9ebf0;
+    --panel-deep: #dcdfe6;
+    --ink: #1d2130;
+    --ink-soft: #545a6b;
+    --rule: #a3a9b7;
+    --select: #30346d;
+    --ok: #2f6b22;
+    --bad: #b8353a;
+    --warn: #9a6114;
+    --ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --pixel: "Pixelify Sans", system-ui, sans-serif;
+    --code: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--desk);
+    color: var(--ink);
+    font: 14px/1.45 var(--ui);
+    display: flex;
+    flex-direction: column;
+  }
+  button, select, input { font: inherit; color: inherit; }
+  button:focus-visible, select:focus-visible, input:focus-visible {
+    outline: 2px solid var(--select);
+    outline-offset: 2px;
+  }
+
+  /* ---------- Title bar ---------- */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 18px;
+    background: var(--ink);
+    color: #eef0f5;
+  }
+  header h1 {
+    margin: 0;
+    font: 700 22px/1 var(--pixel);
+    letter-spacing: 0.02em;
+  }
+  .badge {
+    font: 500 13px/1 var(--pixel);
+    padding: 5px 8px 4px;
+    border-radius: 3px;
+  }
+  .badge-solution { background: #6daa2c; color: #10200a; }
+  .badge-starter  { background: #dad45e; color: #2a2706; }
+  header .hint { margin-left: auto; color: #a9aec0; font-size: 13px; }
+
+  /* ---------- Layout ---------- */
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 212px minmax(0, 1fr) 340px;
+    gap: 14px;
+    padding: 14px;
+    min-height: 0;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 14px;
+    min-height: 0;
+  }
+  .panel h2 {
+    margin: 0 0 8px;
+    font: 500 15px/1.2 var(--pixel);
+    color: var(--ink);
+  }
+  .panel section + section {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--rule);
+  }
+
+  /* ---------- Toolbox ---------- */
+  .tools { display: grid; gap: 6px; }
+  .tool {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 7px 10px;
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: left;
+  }
+  .tool svg { width: 18px; height: 18px; flex: none; }
+  .tool kbd {
+    margin-left: auto;
+    font: 12px var(--code);
+    color: var(--ink-soft);
+  }
+  .tool[aria-pressed="true"] {
+    background: var(--select);
+    border-color: var(--select);
+    color: #fff;
+  }
+  .tool[aria-pressed="true"] kbd { color: #c7cbf0; }
+
+  .size-row { display: flex; align-items: center; gap: 10px; }
+  .size-row input { flex: 1; accent-color: var(--select); }
+  .size-row output { font: 13px var(--code); width: 3ch; text-align: right; }
+
+  /* ---------- Palette ---------- */
+  .current {
+    position: relative;
+    flex: none;
+    width: 64px;
+    height: 52px;
+    margin-bottom: 10px;
+  }
+  .current .swatch-big {
+    position: absolute;
+    width: 38px;
+    height: 38px;
+    border: 2px solid var(--ink);
+    border-radius: 3px;
+  }
+  .current .primary { left: 0; top: 0; z-index: 1; }
+  .current .secondary { left: 22px; top: 14px; }
+  .current-row { display: flex; align-items: flex-start; gap: 10px; }
+  .current-row p { margin: 0; font-size: 12px; color: var(--ink-soft); }
+
+  .palette {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+  }
+  .palette button {
+    aspect-ratio: 1;
+    border: 1px solid rgba(0,0,0,0.35);
+    border-radius: 3px;
+    cursor: pointer;
+    padding: 0;
+    position: relative;
+  }
+  .palette button.is-primary::after,
+  .palette button.is-secondary::before {
+    content: "";
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border: 1.5px solid #fff;
+    outline: 1.5px solid var(--ink);
+  }
+  .palette button.is-primary::after { left: 3px; top: 3px; background: var(--ink); }
+  .palette button.is-secondary::before { right: 3px; bottom: 3px; background: #fff; }
+
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .btn {
+    padding: 6px 8px;
+    background: #fff;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--ink-soft); }
+  .btn:disabled { opacity: 0.45; cursor: default; }
+  .btn.wide { grid-column: 1 / -1; }
+  .check { display: flex; align-items: center; gap: 8px; margin-top: 8px; cursor: pointer; }
+  .check input { accent-color: var(--select); }
+  label.select-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+  label.select-row select { padding: 3px 6px; border: 1px solid var(--rule); border-radius: 4px; background: #fff; }
+
+  /* ---------- Canvas ---------- */
+  .stage {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+  .canvas-scroll {
+    flex: 1;
+    overflow: auto;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+    border-radius: 6px;
+    background:
+      repeating-linear-gradient(0deg, transparent 0 15px, rgba(29,33,48,0.06) 15px 16px),
+      repeating-linear-gradient(90deg, transparent 0 15px, rgba(29,33,48,0.06) 15px 16px),
+      var(--panel-deep);
+    border: 1px solid var(--rule);
+  }
+  .canvas-frame {
+    position: relative;
+    box-shadow: 0 0 0 1px var(--ink), 6px 6px 0 rgba(29,33,48,0.25);
+    line-height: 0;
+  }
+  #paint {
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+  #overlay {
+    position: absolute;
+    inset: 0;
+    cursor: crosshair;
+    touch-action: none;
+  }
+  .canvas-frame.busy #overlay { cursor: progress; }
+
+  .status {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 22px;
+    padding: 8px 4px 0;
+    font: 13px var(--code);
+    color: var(--ink-soft);
+  }
+  .status b { color: var(--ink); font-weight: 600; }
+  .status .ok { color: var(--ok); }
+  .status .bad { color: var(--bad); }
+  .status .warn { color: var(--warn); }
+
+  /* ---------- Tests ---------- */
+  .tests-panel { display: flex; flex-direction: column; }
+  .tests-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .tests-head h2 { margin: 0; }
+  .tests-head .btn { margin-left: auto; background: var(--select); color: #fff; border-color: var(--select); padding: 6px 14px; }
+  .summary { font-size: 13px; color: var(--ink-soft); margin: 0 0 10px; min-height: 1.45em; }
+  .summary.all-pass { color: var(--ok); font-weight: 600; }
+  .sandbox-note { font-size: 12px; color: var(--warn); margin: 0 0 10px; }
+  .test-list { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; min-height: 0; }
+  .test {
+    display: grid;
+    grid-template-columns: 16px 1fr auto;
+    gap: 2px 8px;
+    padding: 8px 0;
+    border-top: 1px solid var(--rule);
+  }
+  .test:first-child { border-top: 0; }
+  .dot {
+    width: 10px; height: 10px; margin-top: 5px;
+    border-radius: 50%;
+    background: transparent;
+    border: 1.5px solid var(--rule);
+  }
+  .test[data-state="pass"] .dot { background: var(--ok); border-color: var(--ok); }
+  .test[data-state="fail"] .dot { background: var(--bad); border-color: var(--bad); }
+  .test[data-state="running"] .dot { border-color: var(--select); border-style: dashed; }
+  .test-name { font-weight: 600; }
+  .test-ms { font: 12px var(--code); color: var(--ink-soft); padding-top: 2px; }
+  .test-desc { grid-column: 2 / -1; font-size: 12.5px; color: var(--ink-soft); }
+  .test-detail {
+    grid-column: 2 / -1;
+    margin: 6px 0 0;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid #e3b9bb;
+    border-left: 3px solid var(--bad);
+    border-radius: 3px;
+    font: 12px/1.4 var(--code);
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--ink);
+  }
+  .test-detail:empty { display: none; }
+
+  @media (max-width: 1180px) {
+    main { grid-template-columns: 212px minmax(0, 1fr); }
+    .tests-panel { grid-column: 1 / -1; }
+    .test-list { max-height: none; }
+  }
+  @media (max-width: 720px) {
+    main { grid-template-columns: 1fr; }
+    header .hint { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Pixel Paint</h1>
+  <span class="badge badge-starter">Starter</span>
+  <span class="hint">Left click paints with the primary color, right click with the secondary</span>
+</header>
+
+<main>
+  <!-- Toolbox -->
+  <aside class="panel" aria-label="Tools">
+    <section>
+      <h2>Tools</h2>
+      <div class="tools" role="group" aria-label="Drawing tool">
+        <button class="tool" data-tool="pencil" aria-pressed="true">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M3 15l1-4 8-8 3 3-8 8-4 1z"/><path d="M10.5 4.5l3 3"/></svg>
+          Pencil <kbd>P</kbd>
+        </button>
+        <button class="tool" data-tool="brush" aria-pressed="false">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M15.5 2.5l-7 7"/><path d="M8.5 9.5c-2-1-4 0-4.5 2S3 15 2.5 15.5c2 .5 5 0 6-1.5s1-3.5 0-4.5z"/></svg>
+          Brush <kbd>B</kbd>
+        </button>
+        <button class="tool" data-tool="fill" aria-pressed="false">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M8 2.5l6.5 6.5-5.5 5.5L2.5 8 8 2.5z"/><path d="M2.5 8h12"/><path d="M15.5 12s-1.5 1.8-1.5 2.8a1.5 1.5 0 003 0c0-1-1.5-2.8-1.5-2.8z"/></svg>
+          Fill <kbd>F</kbd>
+        </button>
+      </div>
+    </section>
+
+    <section>
+      <h2><label for="size">Brush size</label></h2>
+      <div class="size-row">
+        <input id="size" type="range" min="2" max="32" value="6">
+        <output id="size-out" for="size">6</output>
+      </div>
+    </section>
+
+    <section>
+      <h2>Colors</h2>
+      <div class="current-row">
+        <div class="current">
+          <div class="swatch-big primary" id="sw-primary" title="Primary (left click)"></div>
+          <div class="swatch-big secondary" id="sw-secondary" title="Secondary (right click)"></div>
+        </div>
+        <p>Left click a color to set primary, right click for secondary. <kbd>X</kbd> swaps.</p>
+      </div>
+      <div class="palette" id="palette" aria-label="Palette"></div>
+    </section>
+
+    <section>
+      <h2>Canvas</h2>
+      <div class="btn-row">
+        <button class="btn" id="undo" title="Ctrl/Cmd + Z">Undo</button>
+        <button class="btn" id="redo" title="Ctrl/Cmd + Shift + Z">Redo</button>
+        <button class="btn" id="clear">Clear</button>
+        <button class="btn" id="pattern" title="Draws shapes that are useful for testing fill">Test shapes</button>
+      </div>
+      <label class="check"><input type="checkbox" id="grid"> Show grid <kbd>G</kbd></label>
+      <label class="select-row">Zoom
+        <select id="zoom">
+          <option value="1">1×</option>
+          <option value="2">2×</option>
+          <option value="3">3×</option>
+          <option value="4">4×</option>
+        </select>
+      </label>
+    </section>
+  </aside>
+
+  <!-- Canvas -->
+  <div class="stage">
+    <div class="canvas-scroll">
+      <div class="canvas-frame" id="frame">
+        <canvas id="paint" width="256" height="256"></canvas>
+        <canvas id="overlay"></canvas>
+      </div>
+    </div>
+    <div class="status" aria-live="polite">
+      <span>Pos <b id="st-pos">–</b></span>
+      <span>Tool <b id="st-tool">Pencil</b></span>
+      <span>Last fill <b id="st-fill">none yet</b></span>
+    </div>
+  </div>
+
+  <!-- Tests -->
+  <aside class="panel tests-panel" aria-label="Tests">
+    <div class="tests-head">
+      <h2>floodFill tests</h2>
+      <button class="btn" id="run-tests">Run tests</button>
+    </div>
+    <p class="summary" id="summary">Tests call floodFill() directly on small grids and on full-size canvases.</p>
+    <p class="sandbox-note" id="sandbox-note" hidden></p>
+    <ol class="test-list" id="test-list"></ol>
+  </aside>
+</main>
+
+
+<!-- =========================================================================
+     Test suite. Shared by the in-page runner and the background worker, so
+     these two functions must stay self-contained (no outside references).
+     ========================================================================= -->
+<script id="test-suite">
+function defineTests() {
+  // Grids are written as rows of hex digits; each digit is a palette index.
+  function parse(rows) {
+    const h = rows.length, w = rows[0].length;
+    const px = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) px[y * w + x] = parseInt(rows[y][x], 16);
+    }
+    return { px, w, h };
+  }
+
+  function show(px, w, h) {
+    const out = [];
+    for (let y = 0; y < h; y++) {
+      let row = '  ';
+      for (let x = 0; x < w; x++) row += px[y * w + x].toString(16);
+      out.push(row);
+    }
+    return out.join('\n');
+  }
+
+  function returnedCopy(ret, px) {
+    return ret && ArrayBuffer.isView(ret) && ret !== px
+      ? '\nNote: floodFill returned a new array. It should modify `pixels` in place.'
+      : '';
+  }
+
+  // A test that compares the whole grid against an expected result.
+  function exact(name, desc, before, [x, y, color], after) {
+    return {
+      name, desc,
+      run(floodFill) {
+        const g = parse(before);
+        const exp = parse(after);
+        const ret = floodFill(g.px, g.w, g.h, x, y, color);
+        for (let i = 0; i < g.px.length; i++) {
+          if (g.px[i] !== exp.px[i]) {
+            return {
+              pass: false,
+              detail:
+                `floodFill(pixels, ${g.w}, ${g.h}, ${x}, ${y}, ${color})\n` +
+                `First wrong pixel at x=${i % g.w}, y=${Math.floor(i / g.w)}.\n\n` +
+                `Before:\n${show(parse(before).px, g.w, g.h)}\n\n` +
+                `Expected:\n${show(exp.px, g.w, g.h)}\n\n` +
+                `Got:\n${show(g.px, g.w, g.h)}` +
+                returnedCopy(ret, g.px),
+            };
+          }
+        }
+        return { pass: true };
+      },
+    };
+  }
+
+  const boxed = [
+    '0000000',
+    '0111110',
+    '0100010',
+    '0100010',
+    '0111110',
+    '0000000',
+  ];
+
+  return [
+    exact(
+      'Single pixel',
+      'A one-pixel region surrounded by another color.',
+      ['111', '101', '111'], [1, 1, 5],
+      ['111', '151', '111']
+    ),
+    exact(
+      'Stops at a border',
+      'Fill inside a closed outline; the outline and outside stay put.',
+      boxed, [3, 2, 9],
+      ['0000000', '0111110', '0199910', '0199910', '0111110', '0000000']
+    ),
+    exact(
+      'Fills around a shape',
+      'Fill outside a closed outline; the inside stays put.',
+      boxed, [0, 0, 9],
+      ['9999999', '9111119', '9100019', '9100019', '9111119', '9999999']
+    ),
+    exact(
+      'Corners don\'t connect',
+      'Pixels that only touch diagonally are separate regions.',
+      ['001', '010', '100'], [0, 0, 7],
+      ['771', '710', '100']
+    ),
+    exact(
+      'Only the clicked color changes',
+      'Neighbouring pixels of other colors are left alone.',
+      ['0120', '0120', '0000', '3333'], [0, 0, 5],
+      ['5125', '5125', '5555', '3333']
+    ),
+    exact(
+      'Winding path',
+      'A region that doubles back on itself several times.',
+      ['0000000', '1111110', '0000010', '0111010', '0101010', '0100000', '0111111'], [0, 0, 3],
+      ['3333333', '1111113', '3333313', '3111313', '3131313', '3133333', '3111111']
+    ),
+    exact(
+      'Non-square grid',
+      'A 5 × 2 grid, clicked near the far corner.',
+      ['00100', '00100'], [4, 1, 2],
+      ['00122', '00122']
+    ),
+    exact(
+      'Same color as the region',
+      'Filling a region with the color it already has changes nothing.',
+      ['000', '000'], [1, 0, 0],
+      ['000', '000']
+    ),
+    {
+      name: 'Click outside the canvas',
+      desc: 'Coordinates off the edge of the canvas change nothing.',
+      run(floodFill) {
+        const before = ['000', '000'];
+        const calls = [[-1, 0], [3, 0], [0, -1], [0, 2]];
+        for (const [x, y] of calls) {
+          const g = parse(before);
+          floodFill(g.px, g.w, g.h, x, y, 4);
+          if (g.px.some(v => v !== 0)) {
+            return {
+              pass: false,
+              detail: `floodFill(pixels, 3, 2, ${x}, ${y}, 4) changed the grid:\n${show(g.px, g.w, g.h)}`,
+            };
+          }
+        }
+        return { pass: true };
+      },
+    },
+    {
+      name: 'Blank 256 × 256 canvas',
+      desc: 'One region covering all 65,536 pixels.',
+      run(floodFill) {
+        const w = 256, h = 256;
+        const px = new Uint8Array(w * h);
+        const ret = floodFill(px, w, h, 128, 128, 7);
+        let missed = 0;
+        for (let i = 0; i < px.length; i++) if (px[i] !== 7) missed++;
+        return missed
+          ? { pass: false, detail: `${missed.toLocaleString()} of 65,536 pixels were not filled.` + returnedCopy(ret, px) }
+          : { pass: true };
+      },
+    },
+    {
+      name: '256 × 256 zig-zag corridor',
+      desc: 'A single 1-pixel-wide path snaking across the whole canvas.',
+      run(floodFill) {
+        const w = 256, h = 256;
+        const px = new Uint8Array(w * h);
+        // Every odd row is a wall with one gap, alternating ends.
+        for (let y = 1; y < h; y += 2) {
+          const gap = (y % 4 === 1) ? w - 1 : 0;
+          for (let x = 0; x < w; x++) if (x !== gap) px[y * w + x] = 1;
+        }
+        const original = px.slice();
+        const ret = floodFill(px, w, h, 0, 0, 5);
+        let missed = 0, wrong = 0;
+        for (let i = 0; i < px.length; i++) {
+          if (original[i] === 0 && px[i] !== 5) missed++;
+          if (original[i] === 1 && px[i] !== 1) wrong++;
+        }
+        if (missed || wrong) {
+          return {
+            pass: false,
+            detail:
+              (missed ? `${missed.toLocaleString()} corridor pixels were not filled.\n` : '') +
+              (wrong ? `${wrong.toLocaleString()} wall pixels were changed.` : '') +
+              returnedCopy(ret, px),
+          };
+        }
+        return { pass: true };
+      },
+    },
+  ];
+}
+
+// Runs inside the background worker. The candidate's code is prepended to
+// the worker source, so floodFill is in scope here.
+function workerMain(defineTests) {
+  const tests = defineTests();
+  const describe = (err) => (err && err.name ? `${err.name}: ${err.message}` : String(err));
+
+  self.onmessage = (e) => {
+    const m = e.data;
+    try {
+      if (typeof floodFill !== 'function') {
+        throw new Error('floodFill is not defined. Check the code block at the top of the file.');
+      }
+      if (m.type === 'fill') {
+        const px = new Uint8Array(m.buffer);
+        const t0 = performance.now();
+        floodFill(px, m.width, m.height, m.x, m.y, m.color);
+        const ms = performance.now() - t0;
+        self.postMessage({ id: m.id, buffer: px.buffer, ms }, [px.buffer]);
+      } else if (m.type === 'test') {
+        const t0 = performance.now();
+        const r = tests[m.index].run(floodFill);
+        self.postMessage({ id: m.id, pass: !!r.pass, detail: r.detail || '', ms: performance.now() - t0 });
+      }
+    } catch (err) {
+      self.postMessage({ id: m.id, error: describe(err) });
+    }
+  };
+}
+</script>
+
+
+<!-- =========================================================================
+     The paint program
+     ========================================================================= -->
+<script id="app">
+(() => {
+  'use strict';
+
+  const W = 256, H = 256;
+
+  // DawnBringer 16
+  const PALETTE = [
+    '#140c1c', '#442434', '#30346d', '#4e4a4e',
+    '#854c30', '#346524', '#d04648', '#757161',
+    '#597dce', '#d27d2c', '#8595a1', '#6daa2c',
+    '#d2aa99', '#6dc2ca', '#dad45e', '#deeed6',
+  ];
+  const PALETTE_RGB = PALETTE.map(h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)));
+  const BACKGROUND = 15;
+
+  const FILL_TIMEOUT_MS = 3000;
+  const TEST_TIMEOUT_MS = 4000;
+  const UNDO_LIMIT = 60;
+
+  const state = {
+    pixels: new Uint8Array(W * H).fill(BACKGROUND),
+    tool: 'pencil',
+    brushSize: 6,
+    primary: 0,
+    secondary: BACKGROUND,
+    zoom: 2,
+    grid: false,
+    stroke: null,        // { color, lastX, lastY } while drawing
+    hover: null,         // { x, y }
+    undo: [],
+    redo: [],
+    busy: false,         // a fill is in flight
+  };
+
+  // ---------- DOM ----------
+  const $ = (id) => document.getElementById(id);
+  const paint = $('paint');
+  const pctx = paint.getContext('2d');
+  const overlay = $('overlay');
+  const octx = overlay.getContext('2d');
+  const frame = $('frame');
+  const imageData = pctx.createImageData(W, H);
+
+  // ---------- Rendering ----------
+  let renderQueued = false;
+  function scheduleRender() {
+    if (renderQueued) return;
+    renderQueued = true;
+    requestAnimationFrame(() => {
+      renderQueued = false;
+      const d = imageData.data, px = state.pixels;
+      for (let i = 0, j = 0; i < px.length; i++, j += 4) {
+        const c = PALETTE_RGB[px[i]] || [255, 0, 255];
+        d[j] = c[0]; d[j + 1] = c[1]; d[j + 2] = c[2]; d[j + 3] = 255;
+      }
+      pctx.putImageData(imageData, 0, 0);
+    });
+  }
+
+  let dpr = 1;
+  function applyZoom() {
+    const size = W * state.zoom;
+    dpr = window.devicePixelRatio || 1;
+    paint.style.width = paint.style.height = size + 'px';
+    overlay.style.width = overlay.style.height = size + 'px';
+    overlay.width = overlay.height = Math.round(size * dpr);
+    drawOverlay();
+  }
+
+  function brushRadius() { return state.brushSize / 2; }
+
+  function drawOverlay() {
+    const z = state.zoom, size = W * z;
+    octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    octx.clearRect(0, 0, size, size);
+
+    if (state.grid) {
+      const lines = (every, color) => {
+        octx.strokeStyle = color;
+        octx.lineWidth = 1;
+        octx.beginPath();
+        for (let i = every; i < W; i += every) {
+          const p = i * z + 0.5;
+          octx.moveTo(p, 0); octx.lineTo(p, size);
+          octx.moveTo(0, p); octx.lineTo(size, p);
+        }
+        octx.stroke();
+      };
+      if (z >= 3) lines(1, 'rgba(29,33,48,0.10)');
+      lines(16, 'rgba(29,33,48,0.40)');
+    }
+
+    if (state.hover && !state.busy) {
+      const { x, y } = state.hover;
+      const outline = () => {
+        octx.beginPath();
+        if (state.tool === 'brush') {
+          octx.arc((x + 0.5) * z, (y + 0.5) * z, brushRadius() * z, 0, Math.PI * 2);
+        } else {
+          octx.rect(x * z + 0.5, y * z + 0.5, Math.max(z - 1, 1), Math.max(z - 1, 1));
+        }
+      };
+      outline(); octx.strokeStyle = 'rgba(0,0,0,0.75)'; octx.lineWidth = 3; octx.stroke();
+      outline(); octx.strokeStyle = '#fff'; octx.lineWidth = 1; octx.stroke();
+    }
+  }
+
+  // ---------- Drawing primitives ----------
+  function setPixel(x, y, c) {
+    if (x >= 0 && y >= 0 && x < W && y < H) state.pixels[y * W + x] = c;
+  }
+
+  const brushCache = new Map();
+  function brushOffsets(size) {
+    if (!brushCache.has(size)) {
+      const r = size / 2, R = Math.ceil(r), r2 = r * r, list = [];
+      for (let dy = -R; dy <= R; dy++) {
+        for (let dx = -R; dx <= R; dx++) if (dx * dx + dy * dy <= r2) list.push(dx, dy);
+      }
+      brushCache.set(size, list);
+    }
+    return brushCache.get(size);
+  }
+
+  function stamp(x, y, c) {
+    if (state.tool === 'pencil') { setPixel(x, y, c); return; }
+    const offs = brushOffsets(state.brushSize);
+    for (let i = 0; i < offs.length; i += 2) setPixel(x + offs[i], y + offs[i + 1], c);
+  }
+
+  // Bresenham, calling fn for every point from (x0,y0) to (x1,y1) inclusive.
+  function line(x0, y0, x1, y1, fn) {
+    const dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+    const dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+    let err = dx + dy;
+    for (;;) {
+      fn(x0, y0);
+      if (x0 === x1 && y0 === y1) break;
+      const e2 = 2 * err;
+      if (e2 >= dy) { err += dy; x0 += sx; }
+      if (e2 <= dx) { err += dx; y0 += sy; }
+    }
+  }
+
+  // ---------- Undo ----------
+  function pushUndo(snapshot) {
+    state.undo.push(snapshot || state.pixels.slice());
+    if (state.undo.length > UNDO_LIMIT) state.undo.shift();
+    state.redo.length = 0;
+    updateHistoryButtons();
+  }
+  function undo() {
+    if (state.busy || state.stroke || !state.undo.length) return;
+    state.redo.push(state.pixels.slice());
+    state.pixels.set(state.undo.pop());
+    scheduleRender(); updateHistoryButtons();
+  }
+  function redo() {
+    if (state.busy || state.stroke || !state.redo.length) return;
+    state.undo.push(state.pixels.slice());
+    state.pixels.set(state.redo.pop());
+    scheduleRender(); updateHistoryButtons();
+  }
+  function updateHistoryButtons() {
+    $('undo').disabled = !state.undo.length;
+    $('redo').disabled = !state.redo.length;
+  }
+
+  // ---------- Running floodFill (sandboxed in a worker when possible) ----------
+  const runner = (() => {
+    const implSource = $('flood-fill-impl').textContent;
+    const workerSource =
+      implSource +
+      '\n;(' + workerMain.toString() + ')(' + defineTests.toString() + ');\n';
+
+    let url = null, worker = null, sandboxed = true;
+    try {
+      url = URL.createObjectURL(new Blob([workerSource], { type: 'text/javascript' }));
+      new Worker(url).terminate();
+    } catch (e) {
+      sandboxed = false;
+    }
+
+    const getWorker = () => (worker ||= new Worker(url));
+    const kill = () => { if (worker) { worker.terminate(); worker = null; } };
+
+    let seq = 0;
+    function call(msg, transfer, timeoutMs) {
+      return new Promise((resolve, reject) => {
+        const w = getWorker();
+        const id = ++seq;
+        const cleanup = () => {
+          clearTimeout(timer);
+          w.removeEventListener('message', onMessage);
+          w.removeEventListener('error', onError);
+        };
+        const timer = setTimeout(() => {
+          cleanup(); kill();
+          reject(new Error(`Didn't finish within ${timeoutMs / 1000} s. Is there an infinite loop?`));
+        }, timeoutMs);
+        function onMessage(e) {
+          if (e.data.id !== id) return;
+          cleanup();
+          e.data.error ? reject(new Error(e.data.error)) : resolve(e.data);
+        }
+        function onError(e) {
+          e.preventDefault();
+          cleanup(); kill();
+          reject(new Error(e.message || 'The code block failed to load. Check it for syntax errors.'));
+        }
+        w.addEventListener('message', onMessage);
+        w.addEventListener('error', onError);
+        w.postMessage({ ...msg, id }, transfer || []);
+      });
+    }
+
+    // Fallback when workers are blocked (some browsers block them for file:// pages).
+    let localTests = null;
+    function localFn() {
+      if (typeof floodFill !== 'function') {
+        throw new Error('floodFill is not defined. Check the code block at the top of the file for syntax errors.');
+      }
+      return floodFill;
+    }
+
+    return {
+      sandboxed,
+      async fill(pixels, width, height, x, y, color) {
+        if (sandboxed) {
+          const r = await call({ type: 'fill', buffer: pixels.buffer, width, height, x, y, color },
+                               [pixels.buffer], FILL_TIMEOUT_MS);
+          return { pixels: new Uint8Array(r.buffer), ms: r.ms };
+        }
+        const fn = localFn();
+        const t0 = performance.now();
+        fn(pixels, width, height, x, y, color);
+        return { pixels, ms: performance.now() - t0 };
+      },
+      async runTest(index) {
+        if (sandboxed) return call({ type: 'test', index }, null, TEST_TIMEOUT_MS);
+        const fn = localFn();
+        localTests ||= defineTests();
+        const t0 = performance.now();
+        const r = localTests[index].run(fn);
+        return { pass: !!r.pass, detail: r.detail || '', ms: performance.now() - t0 };
+      },
+    };
+  })();
+
+  // ---------- Fill tool ----------
+  function setFillStatus(text, cls) {
+    const el = $('st-fill');
+    el.textContent = text;
+    el.className = cls || '';
+  }
+
+  async function doFill(x, y, color) {
+    if (state.busy || x < 0 || y < 0 || x >= W || y >= H) return;
+    state.busy = true;
+    frame.classList.add('busy');
+    drawOverlay();
+    setFillStatus('running…');
+
+    const before = state.pixels.slice();
+    try {
+      const { pixels, ms } = await runner.fill(before.slice(), W, H, x, y, color);
+      if (pixels.length !== before.length) throw new Error('floodFill changed the length of the pixel array.');
+      let changed = 0;
+      for (let i = 0; i < pixels.length; i++) if (pixels[i] !== before[i]) changed++;
+
+      if (changed) {
+        pushUndo(before);
+        state.pixels.set(pixels);
+        scheduleRender();
+        setFillStatus(`${changed.toLocaleString()} px in ${ms.toFixed(1)} ms`, 'ok');
+      } else if (before[y * W + x] !== color) {
+        setFillStatus('0 px changed. Is floodFill implemented yet?', 'warn');
+      } else {
+        setFillStatus('0 px changed (already that color)');
+      }
+    } catch (err) {
+      setFillStatus(err.message, 'bad');
+    } finally {
+      state.busy = false;
+      frame.classList.remove('busy');
+      drawOverlay();
+    }
+  }
+
+  // ---------- Pointer input ----------
+  function toPixel(e) {
+    const r = overlay.getBoundingClientRect();
+    return {
+      x: Math.floor(((e.clientX - r.left) / r.width) * W),
+      y: Math.floor(((e.clientY - r.top) / r.height) * H),
+    };
+  }
+
+  overlay.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  overlay.addEventListener('pointerdown', (e) => {
+    if (state.busy || (e.button !== 0 && e.button !== 2)) return;
+    e.preventDefault();
+    const { x, y } = toPixel(e);
+    const color = e.button === 2 ? state.secondary : state.primary;
+
+    if (state.tool === 'fill') { doFill(x, y, color); return; }
+
+    overlay.setPointerCapture(e.pointerId);
+    pushUndo();
+    state.stroke = { color, lastX: x, lastY: y };
+    stamp(x, y, color);
+    scheduleRender();
+  });
+
+  overlay.addEventListener('pointermove', (e) => {
+    const { x, y } = toPixel(e);
+    const inside = x >= 0 && y >= 0 && x < W && y < H;
+    state.hover = inside ? { x, y } : null;
+    $('st-pos').textContent = inside ? `${x}, ${y}` : '–';
+
+    const s = state.stroke;
+    if (s && (x !== s.lastX || y !== s.lastY)) {
+      line(s.lastX, s.lastY, x, y, (px, py) => stamp(px, py, s.color));
+      s.lastX = x; s.lastY = y;
+      scheduleRender();
+    }
+    drawOverlay();
+  });
+
+  const endStroke = () => { state.stroke = null; };
+  overlay.addEventListener('pointerup', endStroke);
+  overlay.addEventListener('pointercancel', endStroke);
+  overlay.addEventListener('pointerleave', () => {
+    state.hover = null;
+    $('st-pos').textContent = '–';
+    drawOverlay();
+  });
+
+  // ---------- Toolbox UI ----------
+  const TOOL_NAMES = { pencil: 'Pencil', brush: 'Brush', fill: 'Fill' };
+  function setTool(tool) {
+    state.tool = tool;
+    document.querySelectorAll('.tool').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tool === tool)));
+    $('st-tool').textContent = TOOL_NAMES[tool];
+    drawOverlay();
+  }
+  document.querySelectorAll('.tool').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
+
+  function setBrushSize(n) {
+    state.brushSize = Math.max(2, Math.min(32, n));
+    $('size').value = state.brushSize;
+    $('size-out').textContent = state.brushSize;
+    drawOverlay();
+  }
+  $('size').addEventListener('input', (e) => setBrushSize(+e.target.value));
+
+  const paletteEl = $('palette');
+  PALETTE.forEach((hex, i) => {
+    const b = document.createElement('button');
+    b.style.background = hex;
+    b.title = `Color ${i} (${hex})`;
+    b.setAttribute('aria-label', `Color ${i}, ${hex}`);
+    b.addEventListener('click', () => { state.primary = i; updateSwatches(); });
+    b.addEventListener('contextmenu', (e) => { e.preventDefault(); state.secondary = i; updateSwatches(); });
+    paletteEl.appendChild(b);
+  });
+  function updateSwatches() {
+    $('sw-primary').style.background = PALETTE[state.primary];
+    $('sw-secondary').style.background = PALETTE[state.secondary];
+    [...paletteEl.children].forEach((b, i) => {
+      b.classList.toggle('is-primary', i === state.primary);
+      b.classList.toggle('is-secondary', i === state.secondary);
+    });
+  }
+  function swapColors() {
+    [state.primary, state.secondary] = [state.secondary, state.primary];
+    updateSwatches();
+  }
+  $('sw-secondary').addEventListener('click', swapColors);
+
+  $('undo').addEventListener('click', undo);
+  $('redo').addEventListener('click', redo);
+  $('clear').addEventListener('click', () => {
+    if (state.busy) return;
+    pushUndo();
+    state.pixels.fill(BACKGROUND);
+    scheduleRender();
+  });
+  $('pattern').addEventListener('click', () => {
+    if (state.busy) return;
+    pushUndo();
+    drawTestShapes();
+    scheduleRender();
+  });
+  $('grid').addEventListener('change', (e) => { state.grid = e.target.checked; drawOverlay(); });
+  $('zoom').addEventListener('change', (e) => { state.zoom = +e.target.value; applyZoom(); });
+
+  // ---------- Keyboard ----------
+  document.addEventListener('keydown', (e) => {
+    if (e.target.matches('input, select, textarea')) return;
+    const mod = e.ctrlKey || e.metaKey;
+    const k = e.key.toLowerCase();
+    if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+    if (mod && k === 'y') { e.preventDefault(); redo(); return; }
+    if (mod || e.altKey) return;
+    if (k === 'p') setTool('pencil');
+    else if (k === 'b') setTool('brush');
+    else if (k === 'f') setTool('fill');
+    else if (k === 'x') swapColors();
+    else if (k === 'g') { state.grid = !state.grid; $('grid').checked = state.grid; drawOverlay(); }
+    else if (k === '[') setBrushSize(state.brushSize - 1);
+    else if (k === ']') setBrushSize(state.brushSize + 1);
+  });
+
+  // ---------- Test shapes ----------
+  // Shapes chosen to exercise fill: closed and open outlines, a diagonal-only
+  // outline (4-connected fill must not leak through it), a spiral, a
+  // checkerboard, and a mostly-empty canvas for a large region.
+  function drawTestShapes() {
+    state.pixels.fill(BACKGROUND);
+    const seg = (x0, y0, x1, y1, c) => line(x0, y0, x1, y1, (x, y) => setPixel(x, y, c));
+
+    // Closed rectangle
+    seg(14, 14, 110, 14, 0); seg(110, 14, 110, 96, 0); seg(110, 96, 14, 96, 0); seg(14, 96, 14, 14, 0);
+    // Shape inside it, so the rectangle's interior is a ring
+    seg(44, 40, 80, 40, 6); seg(80, 40, 80, 70, 6); seg(80, 70, 44, 70, 6); seg(44, 70, 44, 40, 6);
+
+    // Circle outline (midpoint algorithm)
+    const cx = 186, cy = 56, r = 42;
+    let x = r, y = 0, err = 1 - r;
+    while (x >= y) {
+      [[x, y], [y, x], [-y, x], [-x, y], [-x, -y], [-y, -x], [y, -x], [x, -y]]
+        .forEach(([dx, dy]) => setPixel(cx + dx, cy + dy, 2));
+      y++;
+      if (err < 0) err += 2 * y + 1; else { x--; err += 2 * (y - x) + 1; }
+    }
+
+    // Diamond made only of diagonal steps: holds a 4-connected fill
+    seg(62, 120, 108, 166, 5); seg(108, 166, 62, 212, 5); seg(62, 212, 16, 166, 5); seg(16, 166, 62, 120, 5);
+
+    // Open "C" shape with a 3-pixel gap: fill leaks out
+    seg(14, 230, 110, 230, 4); seg(14, 230, 14, 250, 4); seg(14, 250, 110, 250, 4); seg(110, 250, 110, 243, 4);
+    seg(110, 230, 110, 239, 4);
+
+    // Rectangular spiral
+    let x0 = 132, y0 = 118, x1 = 244, y1 = 230;
+    const step = 7;
+    while (x1 - x0 > step * 2 && y1 - y0 > step * 2) {
+      seg(x0, y0, x1, y0, 3); seg(x1, y0, x1, y1, 3); seg(x1, y1, x0, y1, 3); seg(x0, y1, x0, y0 + step, 3);
+      seg(x0, y0 + step, x0 + step, y0 + step, 3);
+      x0 += step; y0 += step; x1 -= step; y1 -= step;
+    }
+
+    // Checkerboard patch: every square is its own one-pixel region
+    for (let py = 0; py < 16; py++) {
+      for (let px = 0; px < 16; px++) setPixel(132 + px, 236 + py, (px + py) % 2 ? 8 : 15);
+    }
+  }
+
+  // ---------- Tests UI ----------
+  const TESTS = defineTests();
+  const listEl = $('test-list');
+  const rows = TESTS.map((t) => {
+    const li = document.createElement('li');
+    li.className = 'test';
+    li.dataset.state = 'idle';
+    li.innerHTML =
+      '<span class="dot" aria-hidden="true"></span>' +
+      '<span class="test-name"></span><span class="test-ms"></span>' +
+      '<span class="test-desc"></span><pre class="test-detail"></pre>';
+    li.querySelector('.test-name').textContent = t.name;
+    li.querySelector('.test-desc').textContent = t.desc;
+    listEl.appendChild(li);
+    return li;
+  });
+
+  if (!runner.sandboxed) {
+    const note = $('sandbox-note');
+    note.hidden = false;
+    note.textContent =
+      'This browser blocked background workers for this page, so floodFill runs on the main page. ' +
+      'An infinite loop will freeze the tab. Serving the file locally (for example, python3 -m http.server) avoids this.';
+  }
+
+  let testsRunning = false;
+  $('run-tests').addEventListener('click', async () => {
+    if (testsRunning) return;
+    testsRunning = true;
+    $('run-tests').disabled = true;
+    const summary = $('summary');
+    summary.className = 'summary';
+    let passed = 0;
+
+    rows.forEach(li => {
+      li.dataset.state = 'idle';
+      li.querySelector('.test-ms').textContent = '';
+      li.querySelector('.test-detail').textContent = '';
+    });
+
+    for (let i = 0; i < TESTS.length; i++) {
+      const li = rows[i];
+      li.dataset.state = 'running';
+      summary.textContent = `Running ${i + 1} of ${TESTS.length}…`;
+      // Let the browser paint the "running" state before a main-thread run.
+      await new Promise(requestAnimationFrame);
+      try {
+        const r = await runner.runTest(i);
+        li.dataset.state = r.pass ? 'pass' : 'fail';
+        li.querySelector('.test-ms').textContent = `${r.ms.toFixed(1)} ms`;
+        li.querySelector('.test-detail').textContent = r.pass ? '' : r.detail;
+        if (r.pass) passed++;
+      } catch (err) {
+        li.dataset.state = 'fail';
+        li.querySelector('.test-detail').textContent = err.message;
+      }
+    }
+
+    summary.textContent = passed === TESTS.length
+      ? `All ${TESTS.length} tests passed.`
+      : `${passed} of ${TESTS.length} passed.`;
+    if (passed === TESTS.length) summary.classList.add('all-pass');
+    $('run-tests').disabled = false;
+    testsRunning = false;
+  });
+
+  // ---------- Start ----------
+  const fit = Math.min(window.innerWidth - 640, window.innerHeight - 160);
+  state.zoom = fit >= 768 ? 3 : fit >= 512 ? 2 : 1;
+  $('zoom').value = String(state.zoom);
+  updateSwatches();
+  updateHistoryButtons();
+  applyZoom();
+  scheduleRender();
+  window.addEventListener('resize', () => {
+    if ((window.devicePixelRatio || 1) !== dpr) applyZoom();
+  });
+})();
+</script>
+</body>
+</html>
